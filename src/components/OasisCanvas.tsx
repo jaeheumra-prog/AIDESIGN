@@ -2,7 +2,7 @@
 
 import { OrbitControls, Text } from "@react-three/drei";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { DoubleSide, Vector3 } from "three";
 import { seatDefinitions, type PresenceRecord, type SeatDefinition, type SeatId } from "@/lib/oasis";
@@ -31,10 +31,9 @@ function CameraRig({
   const desiredTarget = useMemo(() => new Vector3(), []);
   const defaultPosition = useMemo(() => new Vector3(12.5, 7.1, 12.8), []);
   const defaultTarget = useMemo(() => new Vector3(0, 1.2, -0.6), []);
+  const isTransitioningRef = useRef(true);
 
-  useFrame((_, delta) => {
-    const ease = 1 - Math.exp(-delta * 3.4);
-
+  useEffect(() => {
     if (selectedSeat) {
       desiredPosition.set(...selectedSeat.cameraPosition);
       desiredTarget.set(...selectedSeat.lookAt);
@@ -43,6 +42,17 @@ function CameraRig({
       desiredTarget.copy(defaultTarget);
     }
 
+    isTransitioningRef.current = true;
+  }, [defaultPosition, defaultTarget, desiredPosition, desiredTarget, selectedSeat]);
+
+  useFrame((_, delta) => {
+    if (!isTransitioningRef.current) {
+      controlsRef.current?.update();
+      return;
+    }
+
+    const ease = 1 - Math.exp(-delta * 3.4);
+
     camera.position.lerp(desiredPosition, ease);
 
     if (controlsRef.current) {
@@ -50,6 +60,22 @@ function CameraRig({
       controlsRef.current.update();
     } else {
       camera.lookAt(desiredTarget);
+    }
+
+    const settled =
+      camera.position.distanceToSquared(desiredPosition) < 0.0025 &&
+      (!controlsRef.current || controlsRef.current.target.distanceToSquared(desiredTarget) < 0.0025);
+
+    if (settled) {
+      camera.position.copy(desiredPosition);
+      if (controlsRef.current) {
+        controlsRef.current.target.copy(desiredTarget);
+        controlsRef.current.update();
+      } else {
+        camera.lookAt(desiredTarget);
+      }
+
+      isTransitioningRef.current = false;
     }
   });
 
@@ -537,7 +563,7 @@ function StudyRoom({
       <OrbitControls
         ref={controlsRef}
         enableDamping
-        enabled={!selectedSeat}
+        enabled
         minDistance={7}
         maxDistance={20}
         maxPolarAngle={Math.PI / 2.05}
