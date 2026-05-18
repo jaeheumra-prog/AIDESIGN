@@ -164,7 +164,7 @@ export default function OasisStage() {
         </div>
 
         <div className="pointer-events-auto flex items-end gap-4">
-          <div className="min-w-[280px] rounded-md border border-[#f4eadb]/12 bg-[#1b1512]/82 p-4 backdrop-blur-sm">
+          <div className="max-h-[72vh] min-w-[300px] overflow-y-auto rounded-md border border-[#f4eadb]/12 bg-[#1b1512]/82 p-4 backdrop-blur-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[0.68rem] uppercase tracking-[0.24em] text-[#f4eadb]/52">Live Seats</p>

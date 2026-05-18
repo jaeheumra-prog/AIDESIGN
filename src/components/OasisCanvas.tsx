@@ -29,8 +29,8 @@ function CameraRig({
   const camera = useThree((state) => state.camera);
   const desiredPosition = useMemo(() => new Vector3(), []);
   const desiredTarget = useMemo(() => new Vector3(), []);
-  const defaultPosition = useMemo(() => new Vector3(7.4, 5.2, 8.1), []);
-  const defaultTarget = useMemo(() => new Vector3(0, 1.1, 0), []);
+  const defaultPosition = useMemo(() => new Vector3(12.5, 7.1, 12.8), []);
+  const defaultTarget = useMemo(() => new Vector3(0, 1.2, -0.6), []);
 
   useFrame((_, delta) => {
     const ease = 1 - Math.exp(-delta * 3.4);
@@ -60,63 +60,89 @@ function RoomShell() {
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, -0.02, 0]}>
-        <planeGeometry args={[20, 18]} />
+        <planeGeometry args={[30, 26]} />
         <meshStandardMaterial color="#6a5442" roughness={0.92} />
       </mesh>
 
       <mesh receiveShadow position={[0, 0.01, 0]}>
-        <boxGeometry args={[8.4, 0.05, 5.8]} />
-        <meshStandardMaterial color="#7b634f" roughness={0.86} />
+        <boxGeometry args={[18.8, 0.05, 13.8]} />
+        <meshStandardMaterial color="#7b634f" roughness={0.84} />
       </mesh>
 
-      <mesh position={[0, 2.8, -5.2]} receiveShadow>
-        <boxGeometry args={[12.8, 5.8, 0.24]} />
+      <mesh position={[0, 3.05, -7.2]} receiveShadow>
+        <boxGeometry args={[19.8, 6.2, 0.24]} />
         <meshStandardMaterial color="#3f342d" roughness={0.95} />
       </mesh>
 
-      <mesh position={[-6.4, 2.8, 0]} receiveShadow>
-        <boxGeometry args={[0.24, 5.8, 10.6]} />
+      <mesh position={[-9.9, 3.05, -0.35]} receiveShadow>
+        <boxGeometry args={[0.24, 6.2, 14.2]} />
         <meshStandardMaterial color="#342a26" roughness={0.95} />
       </mesh>
 
-      <mesh position={[6.4, 2.8, 0]} receiveShadow>
-        <boxGeometry args={[0.24, 5.8, 10.6]} />
+      <mesh position={[9.9, 3.05, -0.35]} receiveShadow>
+        <boxGeometry args={[0.24, 6.2, 14.2]} />
         <meshStandardMaterial color="#342a26" roughness={0.95} />
       </mesh>
 
-      <mesh position={[0, 5.65, 0]} receiveShadow>
-        <boxGeometry args={[12.8, 0.2, 10.6]} />
+      <mesh position={[0, 6.1, -0.35]} receiveShadow>
+        <boxGeometry args={[19.8, 0.2, 14.2]} />
         <meshStandardMaterial color="#2a211e" roughness={0.96} />
       </mesh>
 
-      <mesh position={[-3.2, 2.9, -5.07]}>
-        <boxGeometry args={[2.2, 2.5, 0.05]} />
-        <meshStandardMaterial color="#91b6c6" emissive="#7aa5b6" emissiveIntensity={0.25} />
+      {[-6.8, -2.25, 2.25, 6.8].map((x) => (
+        <mesh key={`window-pane-${x}`} position={[x, 3.15, -7.07]}>
+          <boxGeometry args={[2.55, 2.65, 0.05]} />
+          <meshStandardMaterial color="#91b6c6" emissive="#7aa5b6" emissiveIntensity={0.25} />
+        </mesh>
+      ))}
+
+      {[-6.8, -2.25, 2.25, 6.8].map((x) => (
+        <mesh key={`window-frame-${x}`} position={[x, 3.15, -7.11]}>
+          <boxGeometry args={[2.8, 2.95, 0.08]} />
+          <meshStandardMaterial color="#a27d54" roughness={0.6} metalness={0.1} />
+        </mesh>
+      ))}
+
+      {[-4.55, 0, 4.55].map((x) => (
+        <mesh key={`window-divider-${x}`} position={[x, 3.15, -7.11]}>
+          <boxGeometry args={[0.18, 2.95, 0.08]} />
+          <meshStandardMaterial color="#a27d54" roughness={0.6} metalness={0.1} />
+        </mesh>
+      ))}
+
+      <mesh position={[-9.65, 1.65, -0.2]}>
+        <boxGeometry args={[0.08, 2.35, 5.8]} />
+        <meshStandardMaterial color="#2a211e" roughness={0.95} />
       </mesh>
 
-      <mesh position={[3.2, 2.9, -5.07]}>
-        <boxGeometry args={[2.2, 2.5, 0.05]} />
-        <meshStandardMaterial color="#91b6c6" emissive="#7aa5b6" emissiveIntensity={0.25} />
+      <mesh position={[9.65, 1.65, -0.2]}>
+        <boxGeometry args={[0.08, 2.35, 5.8]} />
+        <meshStandardMaterial color="#2a211e" roughness={0.95} />
       </mesh>
 
-      <mesh position={[-3.2, 2.9, -5.11]}>
-        <boxGeometry args={[2.45, 2.75, 0.08]} />
-        <meshStandardMaterial color="#a27d54" roughness={0.6} metalness={0.1} />
+      <mesh position={[0, 0.03, -1.1]}>
+        <boxGeometry args={[16.8, 0.03, 11.6]} />
+        <meshStandardMaterial color="#6f4329" roughness={0.92} />
       </mesh>
 
-      <mesh position={[3.2, 2.9, -5.11]}>
-        <boxGeometry args={[2.45, 2.75, 0.08]} />
-        <meshStandardMaterial color="#a27d54" roughness={0.6} metalness={0.1} />
+      <mesh position={[0, 0.035, 4.75]}>
+        <boxGeometry args={[16.8, 0.02, 0.38]} />
+        <meshStandardMaterial color="#4b3024" roughness={0.95} />
       </mesh>
 
-      <mesh position={[0, 2.9, -5.11]}>
-        <boxGeometry args={[0.18, 2.75, 0.08]} />
-        <meshStandardMaterial color="#a27d54" roughness={0.6} metalness={0.1} />
+      <mesh position={[0, 0.035, -6.9]}>
+        <boxGeometry args={[16.8, 0.02, 0.38]} />
+        <meshStandardMaterial color="#4b3024" roughness={0.95} />
       </mesh>
 
-      <mesh position={[0, 0.03, 0]}>
-        <ringGeometry args={[3.2, 3.9, 48]} />
-        <meshStandardMaterial color="#7b4c2f" roughness={0.92} side={2} />
+      <mesh position={[-8.2, 0.035, -1.1]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[11.6, 0.02, 0.38]} />
+        <meshStandardMaterial color="#4b3024" roughness={0.95} />
+      </mesh>
+
+      <mesh position={[8.2, 0.035, -1.1]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[11.6, 0.02, 0.38]} />
+        <meshStandardMaterial color="#4b3024" roughness={0.95} />
       </mesh>
     </group>
   );
@@ -420,14 +446,20 @@ function DeskCluster({
 function RoomDecor() {
   return (
     <group>
-      <Shelf position={[-5.15, 1.35, 2.25]} />
-      <Shelf position={[5.15, 1.35, 2.25]} />
-      <Plant position={[-5.25, 0, -3.6]} />
-      <Plant position={[5.25, 0, -3.6]} />
-      <PendantLamp position={[-3.2, 4.8, -2.5]} />
-      <PendantLamp position={[3.2, 4.8, -2.5]} />
-      <PendantLamp position={[-2.25, 4.7, 1.7]} />
-      <PendantLamp position={[2.25, 4.7, 1.7]} />
+      <Shelf position={[-8.15, 1.35, 4.35]} />
+      <Shelf position={[-8.15, 1.35, -3.25]} />
+      <Shelf position={[8.15, 1.35, 4.35]} />
+      <Shelf position={[8.15, 1.35, -3.25]} />
+      <Plant position={[-8.25, 0, -6.1]} />
+      <Plant position={[8.25, 0, -6.1]} />
+      <Plant position={[-8.3, 0, 5.6]} />
+      <Plant position={[8.3, 0, 5.6]} />
+      {[-6.3, -2.1, 2.1, 6.3].map((x) => (
+        <PendantLamp key={`back-lamp-${x}`} position={[x, 5.05, -4.35]} />
+      ))}
+      {[-6.3, -2.1, 2.1, 6.3].map((x) => (
+        <PendantLamp key={`front-lamp-${x}`} position={[x, 5.05, 2.45]} />
+      ))}
     </group>
   );
 }
@@ -506,11 +538,11 @@ function StudyRoom({
         ref={controlsRef}
         enableDamping
         enabled={!selectedSeat}
-        minDistance={5.5}
-        maxDistance={12}
+        minDistance={7}
+        maxDistance={20}
         maxPolarAngle={Math.PI / 2.05}
-        minPolarAngle={Math.PI / 4.5}
-        target={[0, 1.1, 0]}
+        minPolarAngle={Math.PI / 4.8}
+        target={[0, 1.2, -0.6]}
       />
     </>
   );
@@ -527,7 +559,7 @@ export default function OasisCanvas({
       className="h-full w-full"
       shadows
       dpr={[1, 1.5]}
-      camera={{ position: [7.4, 5.2, 8.1], fov: 42 }}
+      camera={{ position: [12.5, 7.1, 12.8], fov: 42 }}
       gl={{ antialias: true }}
     >
       <StudyRoom

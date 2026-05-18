@@ -1,4 +1,12 @@
-export type SeatId = "window-left" | "window-right" | "library-left" | "library-right";
+export type SeatId =
+  | "window-a"
+  | "window-b"
+  | "window-c"
+  | "window-d"
+  | "library-a"
+  | "library-b"
+  | "library-c"
+  | "library-d";
 
 export type SeatDefinition = {
   id: SeatId;
@@ -19,50 +27,90 @@ export type PresenceRecord = {
 };
 
 export const seatLabels: Record<SeatId, string> = {
-  "window-left": "Window Desk A",
-  "window-right": "Window Desk B",
-  "library-left": "Library Table A",
-  "library-right": "Library Table B",
+  "window-a": "Window Desk A",
+  "window-b": "Window Desk B",
+  "window-c": "Window Desk C",
+  "window-d": "Window Desk D",
+  "library-a": "Library Table A",
+  "library-b": "Library Table B",
+  "library-c": "Library Table C",
+  "library-d": "Library Table D",
 };
 
 export const seatDescriptions: Record<SeatId, string> = {
-  "window-left": "A quiet corner with the window glow and a soft desk lamp.",
-  "window-right": "A balanced seat for deep focus and a wider room view.",
-  "library-left": "Closer to the shelves, like studying between old stories.",
-  "library-right": "Warm overhead light and a little more breathing room.",
+  "window-a": "A quiet corner under the far-left window, softly tucked into the room's warm edge.",
+  "window-b": "A centered window seat with a gentle lamp glow and a steady view across the lounge.",
+  "window-c": "A balanced desk where the window light and the room's hush meet in the middle.",
+  "window-d": "A far-right window perch with a little more privacy and a long view of the study floor.",
+  "library-a": "Near the left-side shelves, like studying inside a low-poly storybook.",
+  "library-b": "An inner table with easy sightlines and a comfortable middle-lounge rhythm.",
+  "library-c": "A warm central table seat with room to breathe and plenty of surrounding light.",
+  "library-d": "Closer to the right stacks, for when you want a quieter nook near the wall.",
 };
 
 export const seatDefinitions: SeatDefinition[] = [
   {
-    id: "window-left",
+    id: "window-a",
     label: "Window Desk A",
-    chairPosition: [-3.4, 0, -1.9],
-    tablePosition: [-3.4, 0, -2.9],
-    cameraPosition: [-3.4, 1.55, -1.15],
-    lookAt: [-3.4, 1.08, -3.1],
+    chairPosition: [-6.3, 0, -3.55],
+    tablePosition: [-6.3, 0, -4.75],
+    cameraPosition: [-6.3, 1.55, -2.7],
+    lookAt: [-6.3, 1.06, -4.95],
   },
   {
-    id: "window-right",
+    id: "window-b",
     label: "Window Desk B",
-    chairPosition: [3.4, 0, -1.9],
-    tablePosition: [3.4, 0, -2.9],
-    cameraPosition: [3.4, 1.55, -1.15],
-    lookAt: [3.4, 1.08, -3.1],
+    chairPosition: [-2.1, 0, -3.55],
+    tablePosition: [-2.1, 0, -4.75],
+    cameraPosition: [-2.1, 1.55, -2.7],
+    lookAt: [-2.1, 1.06, -4.95],
   },
   {
-    id: "library-left",
+    id: "window-c",
+    label: "Window Desk C",
+    chairPosition: [2.1, 0, -3.55],
+    tablePosition: [2.1, 0, -4.75],
+    cameraPosition: [2.1, 1.55, -2.7],
+    lookAt: [2.1, 1.06, -4.95],
+  },
+  {
+    id: "window-d",
+    label: "Window Desk D",
+    chairPosition: [6.3, 0, -3.55],
+    tablePosition: [6.3, 0, -4.75],
+    cameraPosition: [6.3, 1.55, -2.7],
+    lookAt: [6.3, 1.06, -4.95],
+  },
+  {
+    id: "library-a",
     label: "Library Table A",
-    chairPosition: [-2.25, 0, 2.4],
-    tablePosition: [-2.25, 0, 1.5],
-    cameraPosition: [-2.25, 1.55, 3.2],
-    lookAt: [-2.25, 1.06, 1.42],
+    chairPosition: [-6.3, 0, 3.15],
+    tablePosition: [-6.3, 0, 2.05],
+    cameraPosition: [-6.3, 1.55, 3.95],
+    lookAt: [-6.3, 1.06, 1.9],
   },
   {
-    id: "library-right",
+    id: "library-b",
     label: "Library Table B",
-    chairPosition: [2.25, 0, 2.4],
-    tablePosition: [2.25, 0, 1.5],
-    cameraPosition: [2.25, 1.55, 3.2],
-    lookAt: [2.25, 1.06, 1.42],
+    chairPosition: [-2.1, 0, 3.15],
+    tablePosition: [-2.1, 0, 2.05],
+    cameraPosition: [-2.1, 1.55, 3.95],
+    lookAt: [-2.1, 1.06, 1.9],
+  },
+  {
+    id: "library-c",
+    label: "Library Table C",
+    chairPosition: [2.1, 0, 3.15],
+    tablePosition: [2.1, 0, 2.05],
+    cameraPosition: [2.1, 1.55, 3.95],
+    lookAt: [2.1, 1.06, 1.9],
+  },
+  {
+    id: "library-d",
+    label: "Library Table D",
+    chairPosition: [6.3, 0, 3.15],
+    tablePosition: [6.3, 0, 2.05],
+    cameraPosition: [6.3, 1.55, 3.95],
+    lookAt: [6.3, 1.06, 1.9],
   },
 ];
