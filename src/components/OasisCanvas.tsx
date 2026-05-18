@@ -5,24 +5,10 @@ import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber"
 import { useMemo, useRef, useState } from "react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { DoubleSide, Vector3 } from "three";
+import { seatDefinitions, type PresenceRecord, type SeatDefinition, type SeatId } from "@/lib/oasis";
 
-type SeatId = "window-left" | "window-right" | "library-left" | "library-right";
-
-type SeatDefinition = {
-  id: SeatId;
-  label: string;
-  chairPosition: [number, number, number];
-  tablePosition: [number, number, number];
-  cameraPosition: [number, number, number];
-  lookAt: [number, number, number];
-};
-
-type Occupant = {
-  id: string;
-  name: string;
+type Occupant = Omit<PresenceRecord, "seatId"> & {
   seatId: SeatId;
-  color: string;
-  mood: string;
   kind: "you" | "guest";
 };
 
@@ -32,41 +18,6 @@ type OasisCanvasProps = {
   onSeatSelect: (seatId: SeatId) => void;
   onSeatBlocked: (seatId: SeatId) => void;
 };
-
-const seatDefinitions: SeatDefinition[] = [
-  {
-    id: "window-left",
-    label: "Window Desk A",
-    chairPosition: [-3.4, 0, -1.9],
-    tablePosition: [-3.4, 0, -2.9],
-    cameraPosition: [-3.4, 1.55, -1.15],
-    lookAt: [-3.4, 1.08, -3.1],
-  },
-  {
-    id: "window-right",
-    label: "Window Desk B",
-    chairPosition: [3.4, 0, -1.9],
-    tablePosition: [3.4, 0, -2.9],
-    cameraPosition: [3.4, 1.55, -1.15],
-    lookAt: [3.4, 1.08, -3.1],
-  },
-  {
-    id: "library-left",
-    label: "Library Table A",
-    chairPosition: [-2.25, 0, 2.4],
-    tablePosition: [-2.25, 0, 1.5],
-    cameraPosition: [-2.25, 1.55, 3.2],
-    lookAt: [-2.25, 1.06, 1.42],
-  },
-  {
-    id: "library-right",
-    label: "Library Table B",
-    chairPosition: [2.25, 0, 2.4],
-    tablePosition: [2.25, 0, 1.5],
-    cameraPosition: [2.25, 1.55, 3.2],
-    lookAt: [2.25, 1.06, 1.42],
-  },
-];
 
 function CameraRig({
   controlsRef,
