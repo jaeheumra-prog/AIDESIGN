@@ -1,10 +1,10 @@
 "use client";
 
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, Text } from "@react-three/drei";
 import { Canvas, type ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { Vector3 } from "three";
+import { DoubleSide, Vector3 } from "three";
 
 type SeatId = "window-left" | "window-right" | "library-left" | "library-right";
 
@@ -17,9 +17,20 @@ type SeatDefinition = {
   lookAt: [number, number, number];
 };
 
+type Occupant = {
+  id: string;
+  name: string;
+  seatId: SeatId;
+  color: string;
+  mood: string;
+  kind: "you" | "guest";
+};
+
 type OasisCanvasProps = {
   selectedSeat: SeatId | null;
+  occupants: Occupant[];
   onSeatSelect: (seatId: SeatId) => void;
+  onSeatBlocked: (seatId: SeatId) => void;
 };
 
 const seatDefinitions: SeatDefinition[] = [
@@ -247,22 +258,94 @@ function Plant({ position }: { position: [number, number, number] }) {
   );
 }
 
+function OccupantAvatar({
+  occupant,
+  chairPosition,
+}: {
+  occupant: Occupant;
+  chairPosition: [number, number, number];
+}) {
+  const bodyColor = occupant.kind === "you" ? "#ffcf96" : occupant.color;
+
+  return (
+    <group position={chairPosition}>
+      <mesh castShadow position={[0, 0.56, 0.02]}>
+        <capsuleGeometry args={[0.2, 0.42, 8, 12]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.68} />
+      </mesh>
+
+      <mesh castShadow position={[0, 1.02, 0]}>
+        <sphereGeometry args={[0.17, 20, 20]} />
+        <meshStandardMaterial color="#f0cfb3" roughness={0.92} />
+      </mesh>
+
+      <mesh castShadow position={[0, 1.18, 0]}>
+        <sphereGeometry args={[0.19, 20, 20]} />
+        <meshStandardMaterial color="#3b2d29" roughness={0.9} />
+      </mesh>
+
+      <mesh castShadow rotation={[0.1, 0, 0.55]} position={[-0.14, 0.64, 0.14]}>
+        <capsuleGeometry args={[0.035, 0.24, 6, 8]} />
+        <meshStandardMaterial color="#e9c3a7" roughness={0.88} />
+      </mesh>
+
+      <mesh castShadow rotation={[0.08, 0, -0.55]} position={[0.14, 0.64, 0.14]}>
+        <capsuleGeometry args={[0.035, 0.24, 6, 8]} />
+        <meshStandardMaterial color="#e9c3a7" roughness={0.88} />
+      </mesh>
+
+      <mesh castShadow rotation={[1.15, 0.08, 0.08]} position={[-0.09, 0.26, 0.18]}>
+        <capsuleGeometry args={[0.04, 0.3, 6, 8]} />
+        <meshStandardMaterial color="#3d332d" roughness={0.9} />
+      </mesh>
+
+      <mesh castShadow rotation={[1.15, -0.08, -0.08]} position={[0.09, 0.26, 0.18]}>
+        <capsuleGeometry args={[0.04, 0.3, 6, 8]} />
+        <meshStandardMaterial color="#3d332d" roughness={0.9} />
+      </mesh>
+
+      <Text
+        position={[0, 1.52, 0]}
+        fontSize={0.16}
+        color="#f6e4cf"
+        anchorX="center"
+        anchorY="middle"
+        outlineColor="#120f0d"
+        outlineWidth={0.02}
+      >
+        {occupant.name}
+      </Text>
+    </group>
+  );
+}
+
 function DeskCluster({
   seat,
   selectedSeatId,
   hoveredSeatId,
+  occupant,
   onSeatSelect,
   onSeatHover,
+  onSeatBlocked,
 }: {
   seat: SeatDefinition;
   selectedSeatId: SeatId | null;
   hoveredSeatId: SeatId | null;
+  occupant: Occupant | null;
   onSeatSelect: (seatId: SeatId) => void;
   onSeatHover: (seatId: SeatId | null) => void;
+  onSeatBlocked: (seatId: SeatId) => void;
 }) {
   const isActive = selectedSeatId === seat.id;
   const isHovered = hoveredSeatId === seat.id;
-  const glowColor = isActive ? "#ffbf7a" : isHovered ? "#ffe2a8" : "#d9b68a";
+  const isTakenByGuest = occupant?.kind === "guest";
+  const glowColor = isTakenByGuest
+    ? "#8a6b68"
+    : isActive
+      ? "#ffbf7a"
+      : isHovered
+        ? "#ffe2a8"
+        : "#d9b68a";
 
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
@@ -276,6 +359,11 @@ function DeskCluster({
 
   const handleSelect = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
+    if (occupant && occupant.kind === "guest") {
+      onSeatBlocked(seat.id);
+      return;
+    }
+
     onSeatSelect(seat.id);
   };
 
@@ -318,7 +406,11 @@ function DeskCluster({
       <group position={seat.chairPosition}>
         <mesh castShadow receiveShadow position={[0, 0.32, 0]}>
           <boxGeometry args={[0.68, 0.12, 0.68]} />
-          <meshStandardMaterial color={glowColor} emissive={glowColor} emissiveIntensity={isActive ? 0.28 : isHovered ? 0.12 : 0.02} />
+          <meshStandardMaterial
+            color={glowColor}
+            emissive={glowColor}
+            emissiveIntensity={isTakenByGuest ? 0.18 : isActive ? 0.28 : isHovered ? 0.12 : 0.02}
+          />
         </mesh>
 
         <mesh castShadow receiveShadow position={[0, 0.72, -0.26]}>
@@ -351,7 +443,22 @@ function DeskCluster({
         {isActive ? (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
             <ringGeometry args={[0.42, 0.54, 32]} />
-            <meshStandardMaterial color="#ffcc8b" emissive="#ffb25c" emissiveIntensity={0.52} side={2} />
+            <meshStandardMaterial
+              color="#ffcc8b"
+              emissive="#ffb25c"
+              emissiveIntensity={0.52}
+              side={DoubleSide}
+            />
+          </mesh>
+        ) : isTakenByGuest ? (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
+            <ringGeometry args={[0.42, 0.54, 32]} />
+            <meshStandardMaterial
+              color="#8b6c67"
+              emissive="#5b2f2f"
+              emissiveIntensity={0.32}
+              side={DoubleSide}
+            />
           </mesh>
         ) : null}
       </group>
@@ -376,14 +483,29 @@ function RoomDecor() {
 
 function StudyRoom({
   selectedSeatId,
+  occupants,
   onSeatSelect,
+  onSeatBlocked,
 }: {
   selectedSeatId: SeatId | null;
+  occupants: Occupant[];
   onSeatSelect: (seatId: SeatId) => void;
+  onSeatBlocked: (seatId: SeatId) => void;
 }) {
   const [hoveredSeatId, setHoveredSeatId] = useState<SeatId | null>(null);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const selectedSeat = seatDefinitions.find((seat) => seat.id === selectedSeatId) ?? null;
+  const occupantBySeat = useMemo(
+    () =>
+      occupants.reduce(
+        (map, occupant) => {
+          map[occupant.seatId] = occupant;
+          return map;
+        },
+        {} as Partial<Record<SeatId, Occupant>>,
+      ),
+    [occupants],
+  );
 
   return (
     <>
@@ -410,10 +532,22 @@ function StudyRoom({
           seat={seat}
           selectedSeatId={selectedSeatId}
           hoveredSeatId={hoveredSeatId}
+          occupant={occupantBySeat[seat.id] ?? null}
           onSeatSelect={onSeatSelect}
           onSeatHover={setHoveredSeatId}
+          onSeatBlocked={onSeatBlocked}
         />
       ))}
+
+      {seatDefinitions.map((seat) => {
+        const occupant = occupantBySeat[seat.id];
+
+        if (!occupant) {
+          return null;
+        }
+
+        return <OccupantAvatar key={occupant.id} occupant={occupant} chairPosition={seat.chairPosition} />;
+      })}
 
       <CameraRig controlsRef={controlsRef} selectedSeat={selectedSeat} />
 
@@ -431,7 +565,12 @@ function StudyRoom({
   );
 }
 
-export default function OasisCanvas({ selectedSeat, onSeatSelect }: OasisCanvasProps) {
+export default function OasisCanvas({
+  selectedSeat,
+  occupants,
+  onSeatSelect,
+  onSeatBlocked,
+}: OasisCanvasProps) {
   return (
     <Canvas
       className="h-full w-full"
@@ -440,7 +579,12 @@ export default function OasisCanvas({ selectedSeat, onSeatSelect }: OasisCanvasP
       camera={{ position: [7.4, 5.2, 8.1], fov: 42 }}
       gl={{ antialias: true }}
     >
-      <StudyRoom selectedSeatId={selectedSeat} onSeatSelect={onSeatSelect} />
+      <StudyRoom
+        selectedSeatId={selectedSeat}
+        occupants={occupants}
+        onSeatSelect={onSeatSelect}
+        onSeatBlocked={onSeatBlocked}
+      />
     </Canvas>
   );
 }
