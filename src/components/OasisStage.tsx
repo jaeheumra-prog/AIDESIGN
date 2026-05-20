@@ -631,6 +631,7 @@ function RecruiterScreen({
 export default function OasisStage() {
   const {
     ready,
+    realtimeMode,
     draftName,
     setDraftName,
     activeName,
@@ -644,7 +645,7 @@ export default function OasisStage() {
   } = useOasisPresence();
 
   const [notice, setNotice] = useState(
-    "Open the Oasis in another browser window, sign in there too, and you'll watch seats update across both screens.",
+    "Realtime is ready to become shared presence. Once a shared backend is configured, seats will sync across separate computers too.",
   );
   const [entryMode, setEntryMode] = useState<EntryMode>("role");
   const [recruiterQuery, setRecruiterQuery] = useState("");
@@ -678,7 +679,9 @@ export default function OasisStage() {
     }
 
     setNotice(
-      `${draftName}님, ${survey.field || "새로운 분야"}를 향한 자리 하나가 준비됐어요. 이제 도서관 안에서 프로젝트와 사람을 만날 시간입니다.`,
+      realtimeMode === "supabase"
+        ? `${draftName}님, ${survey.field || "새로운 분야"}를 향한 자리 하나가 준비됐어요. 이제 다른 컴퓨터에서도 당신의 좌석이 보이기 시작합니다.`
+        : `${draftName}님, ${survey.field || "새로운 분야"}를 향한 자리 하나가 준비됐어요. 지금은 로컬 데모 모드라 같은 브라우저 안에서만 좌석이 공유됩니다.`,
     );
   };
 
@@ -773,10 +776,14 @@ export default function OasisStage() {
             <div className="pointer-events-auto flex items-end gap-4">
               <div className="max-h-[72vh] min-w-[300px] overflow-y-auto rounded-md border border-[#f4eadb]/12 bg-[#1b1512]/82 p-4 backdrop-blur-sm">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[0.68rem] uppercase tracking-[0.24em] text-[#f4eadb]/52">Live Seats</p>
-                    <p className="mt-1 text-xs leading-5 text-[#f4eadb]/42">{`${activeName} is in the room.`}</p>
-                  </div>
+              <div>
+                <p className="text-[0.68rem] uppercase tracking-[0.24em] text-[#f4eadb]/52">Live Seats</p>
+                <p className="mt-1 text-xs leading-5 text-[#f4eadb]/42">
+                  {realtimeMode === "supabase"
+                    ? "Shared across devices"
+                    : "Local-only until Supabase is configured"}
+                </p>
+              </div>
 
                   <button
                     type="button"

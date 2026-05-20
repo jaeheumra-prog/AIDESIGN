@@ -1,13 +1,16 @@
 "use client";
 
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PresenceRecord, SeatId } from "@/lib/oasis";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const STORAGE_KEY = "focus-oasis:presence";
 const CHANNEL_NAME = "focus-oasis:presence";
 const SESSION_ID_KEY = "focus-oasis:session-id";
 const ACTIVE_NAME_KEY = "focus-oasis:active-name";
 const SAVED_NAME_KEY = "focus-oasis:saved-name";
+const ROOM_CHANNEL = "focus-oasis:shared-room";
 const STALE_AFTER_MS = 15_000;
 const HEARTBEAT_MS = 4_000;
 
@@ -17,6 +20,8 @@ type SeatRequestResult =
       ok: false;
       occupant: PresenceRecord;
     };
+
+type RealtimeMode = "supabase" | "local";
 
 function getSessionId() {
   if (typeof window === "undefined") {
@@ -70,6 +75,12 @@ function prunePresenceMap(map: Record<string, PresenceRecord>, now = Date.now())
   ) as Record<string, PresenceRecord>;
 }
 
+function flattenPresenceState(state: Record<string, PresenceRecord[]>) {
+  return Object.values(state)
+    .flat()
+    .sort((left, right) => right.updatedAt - left.updatedAt);
+}
+
 export function useOasisPresence() {
   const [sessionId] = useState(getSessionId);
   const [ready, setReady] = useState(false);
@@ -78,26 +89,34 @@ export function useOasisPresence() {
   const [seatId, setSeatId] = useState<SeatId | null>(null);
   const [others, setOthers] = useState<PresenceRecord[]>([]);
 
-  const channelRef = useRef<BroadcastChannel | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const localChannelRef = useRef<BroadcastChannel | null>(null);
 
   const color = useMemo(() => pickColor(sessionId), [sessionId]);
+  const realtimeMode: RealtimeMode = isSupabaseConfigured ? "supabase" : "local";
 
-  const syncFromStorage = useCallback(() => {
+  const setOthersFromRecords = useCallback(
+    (records: PresenceRecord[]) => {
+      setOthers(
+        records
+          .filter((record) => record.id !== sessionId)
+          .sort((left, right) => right.updatedAt - left.updatedAt),
+      );
+    },
+    [sessionId],
+  );
+
+  const syncLocalFromStorage = useCallback(() => {
     if (typeof window === "undefined") {
       return;
     }
 
     const nextMap = prunePresenceMap(readPresenceMap());
     writePresenceMap(nextMap);
+    setOthersFromRecords(Object.values(nextMap));
+  }, [setOthersFromRecords]);
 
-    const records = Object.values(nextMap)
-      .filter((record) => record.id !== sessionId)
-      .sort((left, right) => right.updatedAt - left.updatedAt);
-
-    setOthers(records);
-  }, [sessionId]);
-
-  const publish = useCallback(
+  const localPublish = useCallback(
     (name: string, nextSeatId: SeatId | null) => {
       const nextMap = prunePresenceMap(readPresenceMap());
       nextMap[sessionId] = {
@@ -110,13 +129,13 @@ export function useOasisPresence() {
       };
 
       writePresenceMap(nextMap);
-      syncFromStorage();
-      channelRef.current?.postMessage({ type: "presence-updated" });
+      syncLocalFromStorage();
+      localChannelRef.current?.postMessage({ type: "presence-updated" });
     },
-    [color, sessionId, syncFromStorage],
+    [color, sessionId, syncLocalFromStorage],
   );
 
-  const purgeSelfPresence = useCallback(() => {
+  const purgeLocalPresence = useCallback(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -128,7 +147,7 @@ export function useOasisPresence() {
 
     delete nextMap[sessionId];
     writePresenceMap(nextMap);
-    channelRef.current?.postMessage({ type: "presence-removed" });
+    localChannelRef.current?.postMessage({ type: "presence-removed" });
   }, [sessionId]);
 
   useEffect(() => {
@@ -143,12 +162,24 @@ export function useOasisPresence() {
       setDraftName(remembered);
       setActiveName(active);
       setReady(true);
-      syncFromStorage();
+      if (realtimeMode === "local") {
+        syncLocalFromStorage();
+      }
     });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [realtimeMode, syncLocalFromStorage]);
+
+  useEffect(() => {
+    if (realtimeMode !== "local" || typeof window === "undefined") {
+      return;
+    }
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === STORAGE_KEY) {
-        syncFromStorage();
+        syncLocalFromStorage();
       }
     };
 
@@ -156,37 +187,111 @@ export function useOasisPresence() {
 
     if ("BroadcastChannel" in window) {
       const channel = new BroadcastChannel(CHANNEL_NAME);
-      channelRef.current = channel;
-      channel.addEventListener("message", syncFromStorage);
+      localChannelRef.current = channel;
+      channel.addEventListener("message", syncLocalFromStorage);
     }
 
-    const cleanupInterval = window.setInterval(syncFromStorage, HEARTBEAT_MS);
+    const cleanupInterval = window.setInterval(syncLocalFromStorage, HEARTBEAT_MS);
 
     return () => {
-      window.cancelAnimationFrame(frame);
       window.removeEventListener("storage", handleStorage);
       window.clearInterval(cleanupInterval);
-      channelRef.current?.close();
-      channelRef.current = null;
+      localChannelRef.current?.close();
+      localChannelRef.current = null;
     };
-  }, [syncFromStorage]);
+  }, [realtimeMode, syncLocalFromStorage]);
 
   useEffect(() => {
-    if (!activeName) {
-      purgeSelfPresence();
+    if (realtimeMode !== "supabase" || !activeName) {
       return;
     }
 
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      return;
+    }
+
+    const channel = supabase.channel(ROOM_CHANNEL, {
+      config: {
+        presence: {
+          key: sessionId,
+        },
+      },
+    });
+
+    channelRef.current = channel;
+
+    const syncPresence = () => {
+      const nextRecords = flattenPresenceState(
+        channel.presenceState<PresenceRecord>() as Record<string, PresenceRecord[]>,
+      );
+      setOthersFromRecords(nextRecords);
+    };
+
+    channel
+      .on("presence", { event: "sync" }, syncPresence)
+      .on("presence", { event: "join" }, syncPresence)
+      .on("presence", { event: "leave" }, syncPresence)
+      .subscribe();
+
+    return () => {
+      if (channelRef.current === channel) {
+        channelRef.current = null;
+      }
+
+      void channel.untrack();
+      void supabase.removeChannel(channel);
+    };
+  }, [activeName, realtimeMode, sessionId, setOthersFromRecords]);
+
+  useEffect(() => {
+    if (!activeName) {
+      if (realtimeMode === "local") {
+        purgeLocalPresence();
+        const frame = window.requestAnimationFrame(() => {
+          syncLocalFromStorage();
+        });
+        return () => {
+          window.cancelAnimationFrame(frame);
+        };
+      }
+      return;
+    }
+
+    const publishPresence = async () => {
+      if (realtimeMode === "supabase") {
+        if (!channelRef.current) {
+          return;
+        }
+
+        await channelRef.current.track({
+          id: sessionId,
+          name: activeName,
+          seatId,
+          color,
+          mood: seatId ? "Settled in for a focus session" : "Looking for a quiet seat",
+          updatedAt: Date.now(),
+        } satisfies PresenceRecord);
+        return;
+      }
+
+      localPublish(activeName, seatId);
+    };
+
     const initialPublish = window.setTimeout(() => {
-      publish(activeName, seatId);
-    }, 0);
+      void publishPresence();
+    }, 120);
 
     const heartbeat = window.setInterval(() => {
-      publish(activeName, seatId);
+      void publishPresence();
     }, HEARTBEAT_MS);
 
     const handleBeforeUnload = () => {
-      purgeSelfPresence();
+      if (realtimeMode === "supabase") {
+        void channelRef.current?.untrack();
+      } else {
+        purgeLocalPresence();
+      }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -195,9 +300,11 @@ export function useOasisPresence() {
       window.clearTimeout(initialPublish);
       window.clearInterval(heartbeat);
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      purgeSelfPresence();
+      if (realtimeMode === "local") {
+        purgeLocalPresence();
+      }
     };
-  }, [activeName, publish, purgeSelfPresence, seatId]);
+  }, [activeName, color, localPublish, purgeLocalPresence, realtimeMode, seatId, sessionId, syncLocalFromStorage]);
 
   const join = useCallback((name: string) => {
     const trimmed = name.trim();
@@ -215,27 +322,29 @@ export function useOasisPresence() {
   const signOut = useCallback(() => {
     setSeatId(null);
     setActiveName(null);
+    setOthers([]);
     window.sessionStorage.removeItem(ACTIVE_NAME_KEY);
-    purgeSelfPresence();
-    syncFromStorage();
-  }, [purgeSelfPresence, syncFromStorage]);
+
+    if (realtimeMode === "supabase") {
+      void channelRef.current?.untrack();
+    } else {
+      purgeLocalPresence();
+      syncLocalFromStorage();
+    }
+  }, [purgeLocalPresence, realtimeMode, syncLocalFromStorage]);
 
   const requestSeat = useCallback(
     (nextSeatId: SeatId): SeatRequestResult => {
-      const activeRecords = Object.values(prunePresenceMap(readPresenceMap()));
-      const takenBy = activeRecords.find(
-        (record) => record.id !== sessionId && record.seatId === nextSeatId,
-      );
+      const takenBy = others.find((record) => record.seatId === nextSeatId);
 
       if (takenBy) {
-        syncFromStorage();
         return { ok: false, occupant: takenBy };
       }
 
       setSeatId(nextSeatId);
       return { ok: true };
     },
-    [sessionId, syncFromStorage],
+    [others],
   );
 
   const standUp = useCallback(() => {
@@ -247,18 +356,19 @@ export function useOasisPresence() {
       return null;
     }
 
-      return {
-        id: sessionId,
-        name: activeName,
-        seatId,
-        color,
-        mood: seatId ? "Settled in for a focus session" : "Looking for a quiet seat",
-        updatedAt: 0,
-      } satisfies PresenceRecord;
-    }, [activeName, color, seatId, sessionId]);
+    return {
+      id: sessionId,
+      name: activeName,
+      seatId,
+      color,
+      mood: seatId ? "Settled in for a focus session" : "Looking for a quiet seat",
+      updatedAt: 0,
+    } satisfies PresenceRecord;
+  }, [activeName, color, seatId, sessionId]);
 
   return {
     ready,
+    realtimeMode,
     draftName,
     setDraftName,
     activeName,
